@@ -267,3 +267,113 @@ async def revoke_wfh(user_email: str = Form(...), token_data: Dict[str, Any] = D
 
     return {"detail": "revoked", "revoked_count": result.modified_count}
 
+
+
+# --- paste into backend/admin_routes.py (append) ---
+from fastapi import Body
+
+# Settings document key used in DB
+_SETTINGS_DOC_ID = "global_policy_v1"
+
+def _normalize_settings(payload: dict) -> dict:
+    """
+    Validate and normalize incoming settings payload.
+    Expected keys:
+      - latitude (float)
+      - longitude (float)
+      - radius_m (int)
+      - allowed_ssid (str)
+      - start_time (str, "HH:MM")  (local office start)
+      - end_time   (str, "HH:MM")  (local office end)
+    """
+    out = {}
+    # latitude / longitude
+    try:
+        lat = float(payload.get("latitude", payload.get("lat", 0)))
+        lon = float(payload.get("longitude", payload.get("lon", 0)))
+        out["latitude"] = lat
+        out["longitude"] = lon
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid latitude/longitude")
+
+    # radius
+    try:
+        r = int(payload.get("radius_m", payload.get("radius", 1000)))
+        if r < 0:
+            raise ValueError()
+        out["radius_m"] = r
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid radius")
+
+    # ssid
+    ssid = payload.get("allowed_ssid", "")
+    if ssid is None:
+        ssid = ""
+    out["allowed_ssid"] = str(ssid)
+
+    # start_time / end_time (HH:MM)
+    def _validate_hhmm(v, name):
+        if not v or not isinstance(v, str):
+            return "00:00" if name == "start_time" else "23:59"
+        parts = v.split(":")
+        if len(parts) != 2:
+            raise HTTPException(status_code=400, detail=f"invalid {name} format")
+        hh, mm = parts
+        try:
+            hh_i = int(hh); mm_i = int(mm)
+            if not (0 <= hh_i < 24 and 0 <= mm_i < 60):
+                raise ValueError()
+        except Exception:
+            raise HTTPException(status_code=400, detail=f"invalid {name}")
+        return f"{hh_i:02d}:{mm_i:02d}"
+
+    out["start_time"] = _validate_hhmm(payload.get("start_time", "09:00"), "start_time")
+    out["end_time"] = _validate_hhmm(payload.get("end_time", "17:00"), "end_time")
+
+    # timestamp for auditing
+    out["updated_at"] = datetime.utcnow()
+    return out
+
+@router.get("/settings")
+async def get_settings(token_data: Dict[str, Any] = Depends(require_admin)):
+    """
+    Return the admin policy settings document.
+    If missing, return sensible defaults.
+    """
+    doc = await db["settings"].find_one({"_id": _SETTINGS_DOC_ID})
+    if not doc:
+        # defaults (use values you showed earlier)
+        default = {
+            "_id": _SETTINGS_DOC_ID,
+            "latitude": 9.35866726100274,
+            "longitude": 76.67729687183018,
+            "radius_m": 1000,
+            "allowed_ssid": "GNXS-92f598",
+            "start_time": "09:00",
+            "end_time": "17:00",
+            "updated_at": datetime.utcnow()
+        }
+        # do not insert automatically to save DB writes; but return defaults
+        return default
+    # convert ObjectId or datetime to JSON serializable forms if needed (FastAPI will handle datetimes)
+    doc["_id"] = str(doc["_id"]) if "_id" in doc and not isinstance(doc["_id"], str) else doc.get("_id")
+    return doc
+
+@router.put("/settings")
+async def update_settings(payload: dict = Body(...), token_data: Dict[str, Any] = Depends(require_admin)):
+    """
+    Update admin policy settings.
+    Accepts JSON body with keys: latitude, longitude, radius_m, allowed_ssid, start_time, end_time.
+    """
+    cleaned = _normalize_settings(payload)
+    # Upsert the single settings doc
+    await db["settings"].update_one({"_id": _SETTINGS_DOC_ID}, {"$set": cleaned}, upsert=True)
+    # Log the change
+    await db["logs"].insert_one({
+        "email": token_data.get("sub"),
+        "action": "updated_settings",
+        "changes": cleaned,
+        "time": datetime.utcnow()
+    })
+    return {"detail": "settings updated", "settings": cleaned}
+# --- end paste ---

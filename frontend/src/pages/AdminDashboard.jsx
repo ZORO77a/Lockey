@@ -1,5 +1,6 @@
 // src/pages/AdminDashboard.jsx
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import API from "../api";
 import FileUpload from "../components/FileUpload";
 import WFHRequests from "../components/WFHRequests";
@@ -7,21 +8,9 @@ import Modal from "../components/Modal";
 import EmployeeForm from "../components/EmployeeForm";
 import { formatDateISOString } from "../utils";
 
-/**
- * Admin dashboard page
- *
- * Responsibilities:
- *  - List employees (edit / delete)
- *  - Upload files
- *  - Show recent logs
- *  - Show WFH requests (uses WFHRequests component)
- *
- * Integration:
- *  - WFHRequests will call onChange() when something changed (approve/reject/revoke).
- *  - This page passes load() to reload employees/files/logs after such changes.
- */
-
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+
   const [employees, setEmployees] = useState([]);
   const [files, setFiles] = useState([]);
   const [logs, setLogs] = useState([]);
@@ -48,15 +37,7 @@ export default function AdminDashboard() {
     }
   }
 
-  useEffect(() => {
-    let mounted = true;
-    // initial load
-    (async () => {
-      if (!mounted) return;
-      await load();
-    })();
-    return () => { mounted = false; };
-  }, []);
+  useEffect(() => { load(); }, []);
 
   function openNewEmployee() {
     setEditing(null);
@@ -73,7 +54,7 @@ export default function AdminDashboard() {
     try {
       await API.post("/admin/delete-employee", new URLSearchParams({ email }));
       alert("Deleted");
-      await load(); // reload lists after deletion
+      await load();
     } catch (err) {
       console.error("deleteEmployee error", err);
       alert(err?.response?.data?.detail || "Delete failed");
@@ -82,6 +63,7 @@ export default function AdminDashboard() {
 
   return (
     <div style={{ padding: 24 }}>
+      {/* Header: title + controls (Settings button added) */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
         <div>
           <h2 style={{ margin: 0 }}>Admin Dashboard</h2>
@@ -89,6 +71,10 @@ export default function AdminDashboard() {
         </div>
 
         <div style={{ display: "flex", gap: 8 }}>
+          {/* Settings button navigates to /admin/settings */}
+          <button className="btn" onClick={() => navigate("/admin/settings")}>Settings</button>
+
+          {/* New employee still here */}
           <button className="btn force-visible-btn" onClick={openNewEmployee}>+ New Employee</button>
         </div>
       </div>
@@ -119,9 +105,7 @@ export default function AdminDashboard() {
                         </td>
                       </tr>
                     ))}
-                    {employees.length === 0 && (
-                      <tr><td colSpan={4} style={{ padding: 12, color: "var(--muted)" }}>No employees</td></tr>
-                    )}
+                    {employees.length === 0 && <tr><td colSpan={4} style={{ padding: 12, color: "var(--muted)" }}>No employees</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -133,15 +117,14 @@ export default function AdminDashboard() {
             <div style={{ marginBottom: 12 }}>
               <FileUpload onUploaded={() => load()} />
             </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {files.length === 0 && <div style={{ color: "var(--muted)" }}>No files uploaded</div>}
+            <div>
               {files.map((f) => (
                 <div key={f._id} className="file-item" style={{ padding: 8 }}>
                   <div style={{ fontWeight: 700 }}>{f.filename}</div>
                   <div className="small">{f.uploaded_by} • {f.uploaded_at ? formatDateISOString(f.uploaded_at) : ""}</div>
                 </div>
               ))}
+              {files.length === 0 && <div style={{ color: "var(--muted)", padding: 8 }}>No files</div>}
             </div>
           </div>
         </div>
@@ -162,10 +145,8 @@ export default function AdminDashboard() {
 
           <div className="card" style={{ marginTop: 18 }}>
             <h3>WFH Requests</h3>
-
-            {/* Use onChange so WFHRequests tells the parent to reload data after actions */}
+            {/* WFHRequests calls onChange which triggers reload here */}
             <WFHRequests onChange={() => load()} />
-
           </div>
         </aside>
       </div>
