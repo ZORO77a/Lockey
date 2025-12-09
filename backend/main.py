@@ -123,6 +123,24 @@ async def verify_otp_endpoint(email: str = Form(...), code: str = Form(...)):
     return {"access_token": token, "role": user["role"]}
 
 
+@app.post("/auth/resend-otp")
+async def resend_otp_endpoint(email: str = Form(...)):
+    """
+    Resend an OTP to the provided email. Used by frontend when user requests a resend from OTP page.
+    """
+    user = await db["users"].find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=404, detail="user not found")
+
+    otp = await generate_and_store_otp(email)
+    try:
+        send_email(user["email"], "Your Geocrypt OTP", f"Your OTP code is: {otp}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OTP email failed: {str(e)}")
+
+    return {"detail": "OTP resent to email"}
+
+
 # ---------------------------------------------------------------------
 # Auth "me" endpoint used by frontend to validate session on refresh
 # ---------------------------------------------------------------------

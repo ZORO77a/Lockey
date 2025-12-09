@@ -33,7 +33,7 @@ def decode_token(token: str):
         return None
 
 # OTP management (stored in collection 'otps' temporarily)
-async def generate_and_store_otp(email: str, ttl_minutes: int = 10) -> str:
+async def generate_and_store_otp(email: str, ttl_minutes: int = 5) -> str:
     code = "{:06d}".format(random.randint(0, 999999))
     expires_at = datetime.utcnow() + timedelta(minutes=ttl_minutes)
     await db["otps"].update_one(
