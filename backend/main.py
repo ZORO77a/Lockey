@@ -1,4 +1,4 @@
-# main.py - Geocrypt Backend Entrypoint
+# main.py - Geocrypt Backend Entrypoint (rewritten, includes /auth/me)
 import os
 from datetime import datetime
 from dotenv import load_dotenv
@@ -55,7 +55,7 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------------------
-# JWT decoding helper
+# Security helper (HTTP Bearer)
 # ---------------------------------------------------------------------
 bearer = HTTPBearer()
 
@@ -68,7 +68,6 @@ async def get_current_user(token: HTTPAuthorizationCredentials = Depends(bearer)
     if not payload:
         raise HTTPException(status_code=401, detail="invalid token")
     return payload
-
 
 # ---------------------------------------------------------------------
 # Startup bootstrap – ensure admin exists
@@ -125,6 +124,31 @@ async def verify_otp_endpoint(email: str = Form(...), code: str = Form(...)):
 
 
 # ---------------------------------------------------------------------
+# Auth "me" endpoint used by frontend to validate session on refresh
+# ---------------------------------------------------------------------
+@app.get("/auth/me")
+async def auth_me(token: HTTPAuthorizationCredentials = Depends(bearer)):
+    """
+    Returns authenticated user details (email, role, name).
+    Frontend calls this to validate the JWT on page refresh.
+    """
+    data = decode_token(token.credentials)
+    if not data:
+        raise HTTPException(status_code=401, detail="invalid token")
+
+    email = data.get("sub")
+    user = await db["users"].find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=404, detail="user not found")
+
+    return {
+        "email": user["email"],
+        "role": user["role"],
+        "name": user.get("name", "")
+    }
+
+
+# ---------------------------------------------------------------------
 # FILE STREAM ENDPOINT (used for internal admin/employee flows)
 # ---------------------------------------------------------------------
 @app.post("/stream-file")
@@ -168,6 +192,8 @@ async def employee_request_and_download(
 
     # Fetch employee info
     user = await db["users"].find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=404, detail="user not found")
 
     # -------------------------
     # WFH bypass logic
@@ -248,8 +274,9 @@ async def employee_request_and_download(
 
 
 # ---------------------------------------------------------------------
-# MOUNT ADMIN + EMPLOYEE ROUTES (NO dependency override!)
+# MOUNT ADMIN + EMPLOYEE ROUTES
 # ---------------------------------------------------------------------
+# These routers already perform their own internal auth/role checks using current_user where needed.
 app.include_router(admin_router)
 app.include_router(employee_router)
 
