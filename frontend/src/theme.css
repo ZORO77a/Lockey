@@ -1,0 +1,43 @@
+/* theme.css — glossy tokens */
+:root{
+  --bg-1: #071127;
+  --bg-2: #071a2a;
+  --panel: rgba(255,255,255,0.04);
+  --glass: rgba(255,255,255,0.06);
+  --muted: rgba(255,255,255,0.72);
+  --accent-1: #06b6d4; /* cyan */
+  --accent-2: #7c3aed; /* violet */
+  --accent-3: #0ea5e9; /* bright blue */
+  --success: #10b981;
+  --danger: #ef4444;
+  --text: #e6eef8;
+  --card-glow: 0 10px 40px rgba(124,58,237,0.12);
+  --glass-border: rgba(255,255,255,0.06);
+  --glass-border-strong: rgba(255,255,255,0.09);
+  --glass-blur: 10px;
+}
+
+/* light theme override */
+[data-theme="light"]{
+  --bg-1: #f6f9fc;
+  --bg-2: #eaf2fb;
+  --panel: rgba(10,23,42,0.03);
+  --glass: rgba(11,99,212,0.06);
+  --muted: #475569;
+  --accent-1: #0b63d4;
+  --accent-2: #2563eb;
+  --accent-3: #0b63d4;
+  --text: #061025;
+  --card-glow: 0 10px 30px rgba(11,99,212,0.06);
+  --glass-border: rgba(11,99,212,0.06);
+  --glass-border-strong: rgba(11,99,212,0.12);
+  --glass-blur: 6px;
+}
+
+/* Apply basic background gradient */
+body {
+  background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 60%);
+  color: var(--text);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}

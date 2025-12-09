@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Geocrypt — Secure Geo-Fenced Access</title>
+    <meta name="description" content="Geocrypt — encrypted file access with geofencing and MFA" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <!-- Decorative gradient layers (subtle and performant) -->
+    <div id="bg-visuals" aria-hidden="true" style="position:fixed;inset:0;z-index:-1;pointer-events:none;">
+      <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 1600 900" style="display:block">
+        <defs>
+          <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.12" />
+            <stop offset="45%" stop-color="#7c3aed" stop-opacity="0.12" />
+            <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.07" />
+          </linearGradient>
+          <radialGradient id="r1" cx="20%" cy="15%">
+            <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.12" />
+            <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+
+        <rect x="0" y="0" width="1600" height="900" fill="url(#g1)"></rect>
+
+        <circle cx="1200" cy="120" r="420" fill="url(#r1)" />
+        <circle cx="120" cy="760" r="360" fill="rgba(124,58,237,0.05)"></circle>
+      </svg>
+    </div>
+
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

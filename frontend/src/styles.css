@@ -1,0 +1,195 @@
+/* styles.css — glossy UI kit */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+
+*{box-sizing:border-box}
+html,body,#root{height:100%}
+body{
+  margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  transition: background 400ms ease;
+}
+
+/* Layout container */
+.container {
+  max-width:1160px;
+  margin:28px auto;
+  padding:20px;
+}
+
+/* Header */
+.header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:18px;
+}
+
+.brand {
+  display:flex;align-items:center;gap:12px;
+  color:var(--text);
+}
+.brand .logo {
+  width:44px;height:44px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent-2),var(--accent-3));
+  box-shadow: var(--card-glow);
+  display:inline-flex;align-items:center;justify-content:center;font-weight:800;color:white;
+  font-size:18px;
+}
+
+/* Glass card */
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:14px;
+  padding:18px;
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--card-glow);
+  margin-bottom:18px;
+}
+
+/* Grid layout */
+.grid {display:grid;grid-template-columns:1fr 380px;gap:20px}
+
+/* Buttons */
+.btn {
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:700;
+  color:white;background:linear-gradient(90deg,var(--accent-3),var(--accent-2));
+  box-shadow:0 8px 18px rgba(2,6,23,0.48);
+  transition:transform 120ms ease, box-shadow 120ms ease, opacity 120ms;
+}
+.btn:hover{ transform: translateY(-2px); box-shadow:0 14px 30px rgba(2,6,23,0.6) }
+.btn:active{ transform: translateY(0); box-shadow:0 6px 12px rgba(2,6,23,0.48) }
+
+.btn.ghost{
+  background:transparent;color:var(--text);border:1px solid var(--glass-border);
+  box-shadow:none;font-weight:600;
+}
+.btn.danger{ background: linear-gradient(90deg,var(--danger),#b91c1c) }
+
+/* Strong forced login submit */
+.login-submit-btn {
+  display:block;width:100%;padding:12px;margin-top:16px;text-align:center;
+  background:linear-gradient(90deg,var(--accent-3),var(--accent-2));
+  color:white;border-radius:12px;border:0;font-weight:800;font-size:15px;cursor:pointer;
+  box-shadow:0 12px 30px rgba(14,165,233,0.12), inset 0 -2px 6px rgba(0,0,0,0.14);
+}
+.login-submit-btn:hover{ transform: translateY(-2px) }
+.login-submit-btn:active{ transform: translateY(0) }
+
+/* Forms */
+.form-row{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+label{font-size:13px;color:var(--muted);font-weight:600}
+.input, textarea, select {
+  padding:12px;border-radius:10px;border:1px solid var(--glass-border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  color:var(--text);outline:none;font-size:14px;
+  transition: box-shadow 140ms ease, border-color 100ms ease, transform 100ms ease;
+}
+.input:focus{ box-shadow: 0 8px 30px rgba(14,165,233,0.06); border-color: var(--accent-3); transform: translateY(-1px) }
+
+/* Tables */
+.table{width:100%;border-collapse:collapse}
+.table th{ text-align:left;padding:10px;color:var(--muted);font-size:13px }
+.table td{ padding:12px;border-bottom:1px solid rgba(255,255,255,0.02);vertical-align:middle }
+
+/* Lists and file items */
+.file-item{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));margin-bottom:8px}
+.file-item .meta{color:var(--muted);font-size:13px}
+
+/* Modal */
+.modal-backdrop{position:fixed;inset:0;background:linear-gradient(180deg, rgba(2,6,23,0.6), rgba(2,6,23,0.55));display:flex;align-items:center;justify-content:center;z-index:60}
+.modal{width:760px;max-width:96%;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:18px;border:1px solid var(--glass-border-strong);box-shadow:0 30px 80px rgba(2,6,23,0.7)}
+.preview{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+
+/* Small helper */
+.small{font-size:13px;color:var(--muted)}
+
+/* Responsive */
+@media (max-width:980px){
+  .grid{grid-template-columns:1fr; padding:0}
+  .container{padding:12px}
+}
+
+/* Accessibility focus */
+:focus{outline: 3px solid rgba(14,165,233,0.12);outline-offset:3px}
+
+
+/* Ensure primary action buttons in admin are prominent */
+.btn.danger {
+  background: linear-gradient(90deg, var(--danger), #b91c1c);
+  color: white;
+  box-shadow: 0 8px 20px rgba(239,68,68,0.12);
+}
+
+.btn.ghost {
+  background: transparent;
+  border: 1px solid var(--glass-border-strong);
+  color: var(--text);
+}
+
+.login-submit-btn {
+  /* keep the highly-visible style for upload and primary actions */
+  display: inline-block !important;
+  width: auto !important;
+  min-width: 140px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+
+/* ---------- FORCE VISIBLE UI (append at BOTTOM of src/styles.css) ---------- */
+
+/* Make primary/action buttons highly visible */
+.force-visible-btn,
+.login-submit-btn,
+.btn,
+button {
+  background: linear-gradient(90deg, #06b6d4, #7c3aed) !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: 0 10px 30px rgba(12, 34, 80, 0.28) !important;
+  text-shadow: none !important;
+  opacity: 1 !important;
+}
+
+/* Danger/delete buttons */
+.force-delete-btn,
+.btn.danger {
+  background: linear-gradient(90deg, #ef4444, #b91c1c) !important;
+  color: #fff !important;
+  border: 0 !important;
+}
+
+/* Ghost buttons (edits) - visible */
+.btn.ghost,
+.force-ghost {
+  background: rgba(255,255,255,0.04) !important;
+  color: var(--text) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+/* Ensure inputs are readable */
+.input, input, textarea, select {
+  background: rgba(255,255,255,0.03) !important;
+  color: var(--text) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: none !important;
+}
+
+/* Table action buttons sizing */
+.table .btn { min-width: 80px; }
+
+/* Modal contrast */
+.modal { 
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)) !important;
+  color: var(--text) !important;
+}
+
+/* Minor spacing fix for upload area */
+.file-item input[type="file"] { min-width: 220px; }
+
+/* Small helper */
+.small { color: var(--muted) !important; }
