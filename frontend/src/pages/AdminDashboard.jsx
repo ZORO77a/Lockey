@@ -1,5 +1,5 @@
 // src/pages/AdminDashboard.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api";
 import FileUpload from "../components/FileUpload";
@@ -7,6 +7,158 @@ import WFHRequests from "../components/WFHRequests";
 import Modal from "../components/Modal";
 import EmployeeForm from "../components/EmployeeForm";
 import { formatDateISOString } from "../utils";
+
+/**
+ * Small internal FilePreview component.
+ * Props:
+ *  - open (bool), fileId (string), filename (string), onClose (fn)
+ * Uses your /stream-file endpoint and expects API to attach Authorization header.
+ */
+function FilePreview({ open, fileId, filename, onClose }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [mime, setMime] = useState(null);
+  const [textPreview, setTextPreview] = useState(null);
+  const urlRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!fileId) return;
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setBlobUrl(null);
+    setMime(null);
+    setTextPreview(null);
+
+    async function load() {
+      try {
+        const form = new URLSearchParams();
+        form.set("file_id", fileId);
+
+        // responseType arraybuffer to get raw bytes
+        const res = await API.post("/stream-file", form, { responseType: "arraybuffer" });
+
+        // infer mime from response header if present, fallback to filename extension
+        const headerMime = res.headers && res.headers["content-type"];
+        let inferred = headerMime || inferMimeFromFilename(filename);
+
+        const ab = res.data;
+        const blob = new Blob([ab], { type: inferred });
+        const url = URL.createObjectURL(blob);
+        urlRef.current = url;
+
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+
+        setMime(inferred);
+        setBlobUrl(url);
+
+        // if text, decode and keep preview
+        if (inferred.startsWith("text/")) {
+          try {
+            const dec = new TextDecoder("utf-8");
+            const txt = dec.decode(ab);
+            setTextPreview(txt.slice(0, 200000)); // limit for performance
+          } catch (e) {
+            // ignore decoding errors
+          }
+        }
+      } catch (err) {
+        console.error("File preview load error:", err);
+        setError(err?.response?.data?.detail || err.message || "Failed to load file preview");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+      if (urlRef.current) {
+        URL.revokeObjectURL(urlRef.current);
+        urlRef.current = null;
+      }
+    };
+  }, [open, fileId, filename]);
+
+  function inferMimeFromFilename(name = "") {
+    const ext = (name || "").split(".").pop().toLowerCase();
+    if (["png", "jpg", "jpeg", "gif", "bmp", "webp"].includes(ext)) return ext === "jpg" ? "image/jpeg" : `image/${ext}`;
+    if (ext === "pdf") return "application/pdf";
+    if (["txt", "log", "md", "csv", "json", "xml"].includes(ext)) return "text/plain";
+    if (["mp4", "webm", "ogg"].includes(ext)) return `video/${ext}`;
+    return "application/octet-stream";
+  }
+
+  function renderBody() {
+    if (loading) return <div style={{ padding: 18 }}>Loading preview…</div>;
+    if (error) return <div style={{ padding: 18, color: "#c0392b" }}>{error}</div>;
+    if (!blobUrl) return <div style={{ padding: 18 }}>No preview available.</div>;
+
+    if (mime?.startsWith("image/")) {
+      return (
+        <div style={{ padding: 12, display: "flex", justifyContent: "center" }}>
+          <img src={blobUrl} alt={filename} style={{ maxWidth: "100%", maxHeight: "70vh", borderRadius: 8 }} />
+        </div>
+      );
+    }
+
+    if (mime === "application/pdf") {
+      return (
+        <div style={{ height: "70vh" }}>
+          <iframe title={filename} src={blobUrl} style={{ width: "100%", height: "100%", border: "none" }} />
+        </div>
+      );
+    }
+
+    if (mime?.startsWith("video/")) {
+      return (
+        <div style={{ padding: 12 }}>
+          <video controls style={{ width: "100%", maxHeight: "70vh" }}>
+            <source src={blobUrl} type={mime} />
+            Your browser does not support the video tag.
+          </video>
+        </div>
+      );
+    }
+
+    if (mime?.startsWith("text/") || textPreview !== null) {
+      return (
+        <div style={{ padding: 12, maxHeight: "70vh", overflow: "auto", background: "#0b1220", color: "#e8eef8", borderRadius: 8 }}>
+          <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0 }}>{textPreview || "Empty file"}</pre>
+        </div>
+      );
+    }
+
+    // fallback: show download and open links
+    return (
+      <div style={{ padding: 18 }}>
+        <div style={{ marginBottom: 12 }}>No inline preview available for this file type.</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <a className="btn" href={blobUrl} download={filename}>Download</a>
+          <a className="btn ghost" href={blobUrl} target="_blank" rel="noreferrer">Open in new tab</a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title={`Preview: ${filename || ""}`} wide>
+      <div style={{ minHeight: 120 }}>{renderBody()}</div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
+        {blobUrl && <a className="btn" href={blobUrl} download={filename}>Download</a>}
+        <button className="btn ghost" onClick={onClose}>Close</button>
+      </div>
+    </Modal>
+  );
+}
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -17,6 +169,10 @@ export default function AdminDashboard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // preview state
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewFile, setPreviewFile] = useState({ fileId: null, filename: null });
 
   async function load() {
     setLoading(true);
@@ -37,7 +193,9 @@ export default function AdminDashboard() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   function openNewEmployee() {
     setEditing(null);
@@ -53,11 +211,46 @@ export default function AdminDashboard() {
     if (!confirm(`Delete ${email}?`)) return;
     try {
       await API.post("/admin/delete-employee", new URLSearchParams({ email }));
-      alert("Deleted");
       await load();
     } catch (err) {
       console.error("deleteEmployee error", err);
       alert(err?.response?.data?.detail || "Delete failed");
+    }
+  }
+
+  // open preview modal for file
+  function openPreview(file) {
+    // backend stores file_id as string; some records might have file_id or _id
+    const fid = file.file_id || file.fileId || file._id;
+    setPreviewFile({ fileId: String(fid), filename: file.filename || file.name || "file" });
+    setPreviewOpen(true);
+  }
+
+  function closePreview() {
+    setPreviewOpen(false);
+    setPreviewFile({ fileId: null, filename: null });
+  }
+
+  // download helper using stream-file
+  async function downloadFile(file) {
+    try {
+      const fid = file.file_id || file.fileId || file._id;
+      const form = new URLSearchParams();
+      form.set("file_id", String(fid));
+      const res = await API.post("/stream-file", form, { responseType: "arraybuffer" });
+      const contentType = res.headers && res.headers["content-type"] ? res.headers["content-type"] : "application/octet-stream";
+      const blob = new Blob([res.data], { type: contentType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.filename || `download`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("downloadFile error", err);
+      alert("Download failed — check console");
     }
   }
 
@@ -71,10 +264,7 @@ export default function AdminDashboard() {
         </div>
 
         <div style={{ display: "flex", gap: 8 }}>
-          {/* Settings button navigates to /admin/settings */}
           <button className="btn" onClick={() => navigate("/admin/settings")}>Settings</button>
-
-          {/* New employee still here */}
           <button className="btn force-visible-btn" onClick={openNewEmployee}>+ New Employee</button>
         </div>
       </div>
@@ -119,9 +309,16 @@ export default function AdminDashboard() {
             </div>
             <div>
               {files.map((f) => (
-                <div key={f._id} className="file-item" style={{ padding: 8 }}>
-                  <div style={{ fontWeight: 700 }}>{f.filename}</div>
-                  <div className="small">{f.uploaded_by} • {f.uploaded_at ? formatDateISOString(f.uploaded_at) : ""}</div>
+                <div key={f._id || f.file_id} className="file-item" style={{ padding: 8, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{f.filename}</div>
+                    <div className="small">{f.uploaded_by} • {f.uploaded_at ? formatDateISOString(f.uploaded_at) : ""}</div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button className="btn ghost" onClick={() => openPreview(f)}>Preview</button>
+                    <button className="btn" onClick={() => downloadFile(f)}>Download</button>
+                  </div>
                 </div>
               ))}
               {files.length === 0 && <div style={{ color: "var(--muted)", padding: 8 }}>No files</div>}
@@ -145,7 +342,6 @@ export default function AdminDashboard() {
 
           <div className="card" style={{ marginTop: 18 }}>
             <h3>WFH Requests</h3>
-            {/* WFHRequests calls onChange which triggers reload here */}
             <WFHRequests onChange={() => load()} />
           </div>
         </aside>
@@ -158,6 +354,13 @@ export default function AdminDashboard() {
           onClose={() => setModalOpen(false)}
         />
       </Modal>
+
+      <FilePreview
+        open={previewOpen}
+        fileId={previewFile.fileId}
+        filename={previewFile.filename}
+        onClose={closePreview}
+      />
     </div>
   );
 }

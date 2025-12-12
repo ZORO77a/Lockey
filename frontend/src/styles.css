@@ -193,3 +193,10 @@ button {
 
 /* Small helper */
 .small { color: var(--muted) !important; }
+
+
+
+.file-item { padding: 10px 0; }
+.file-item .btn { min-width: 90px; }
+
+.modal-wide { max-width: 1000px; }
